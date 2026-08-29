@@ -1,0 +1,9 @@
+export const EMAIL_QUEUE_NAME = "email-scheduler";
+export const EMAIL_JOB_NAME = "send-email";
+export const DEFAULT_PAGE_LIMIT = 20;
+export const MAX_PAGE_LIMIT = 100;
+export const DEFAULT_WORKER_CONCURRENCY = 5;
+export const DEFAULT_MIN_SEND_DELAY_MS = 2000;
+export const DEFAULT_MAX_EMAILS_PER_HOUR = 30;
+export const SLACK_DEDUPE_TTL_SECONDS = 7200; // 2 hours
+export const RATE_LIMIT_TTL_SECONDS = 7200; // 2 hours

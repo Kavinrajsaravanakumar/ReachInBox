@@ -2,6 +2,7 @@
 
 import { Table } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/emails/StatusBadge";
+import { EtherealLinkButton } from "@/components/emails/EtherealLinkButton";
 import { displayNameFromEmail } from "@/lib/format";
 import type { EmailRow } from "@/types";
 
@@ -30,7 +31,7 @@ export function SentTable({
         {
           key: "email",
           header: "Email",
-          className: "w-[220px]",
+          className: "w-[200px]",
           render: (r) => (
             <span className="text-[15px] font-semibold text-ink">
               To: {displayNameFromEmail(r.recipientEmail)}
@@ -53,6 +54,7 @@ export function SentTable({
             </p>
           ),
         },
+
         {
           key: "sent",
           header: "Sent time",

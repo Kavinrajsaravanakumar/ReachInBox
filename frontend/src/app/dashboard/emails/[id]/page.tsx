@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
 import type { EmailRow } from "@/types";
 import { formatSentAt } from "@/lib/format";
+import { EtherealLinkButton } from "@/components/emails/EtherealLinkButton";
 
 export default function EmailDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,9 +71,9 @@ export default function EmailDetailPage() {
           <p className="mt-4 rounded-lg bg-failed-bg px-3 py-2 text-sm text-failed-text">{row.error}</p>
         ) : null}
         {row.previewUrl ? (
-          <a className="mt-6 inline-block text-sm text-brand" href={row.previewUrl} target="_blank" rel="noreferrer">
-            Open Ethereal preview
-          </a>
+          <div className="mt-8">
+            <EtherealLinkButton previewUrl={row.previewUrl} />
+          </div>
         ) : null}
       </article>
     </main>

@@ -43,7 +43,8 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
   const [body, setBody] = useState("");
   const [delaySec, setDelaySec] = useState("0");
   const [hourly, setHourly] = useState("0");
-  const [startTime, setStartTime] = useState(toDatetimeLocal(new Date()));
+  const [scheduleMode, setScheduleMode] = useState<"immediate" | "later">("immediate");
+  const [customStartTime, setCustomStartTime] = useState("");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -124,8 +125,21 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
       toast.error("Add at least one recipient");
       return;
     }
-    if (!startTime) {
-      toast.error("Pick a start time");
+
+    let resolvedStartTime: Date;
+    if (scheduleMode === "immediate") {
+      resolvedStartTime = new Date(); // computed dynamically at submission time
+    } else {
+      if (!customStartTime) {
+        toast.error("Please pick a valid future date and time to schedule");
+        return;
+      }
+      resolvedStartTime = new Date(customStartTime);
+    }
+
+    // Client-side guard: ensure resolved start time is not in the past
+    if (scheduleMode === "later" && resolvedStartTime.getTime() < Date.now() - 60000) {
+      toast.error("The selected start time is in the past. Please update it to a future time or select 'Start immediately'.");
       return;
     }
 
@@ -139,7 +153,7 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
         subject: subject.trim(),
         body: body.trim(),
         recipients: recips,
-        startTime: new Date(startTime).toISOString(),
+        startTime: resolvedStartTime.toISOString(),
         delayBetweenEmailsMs,
         maxEmailsPerHour: Number.isFinite(maxEmailsPerHour) && maxEmailsPerHour > 0 ? maxEmailsPerHour : undefined,
       };
@@ -183,14 +197,24 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
               </span>
             ) : null}
           </label>
-          <button type="button" className="text-brand" onClick={() => setScheduleOpen(true)} aria-label="Schedule">
+          <button
+            type="button"
+            className={`p-1.5 rounded-full transition-colors ${
+              scheduleMode === "later"
+                ? "bg-brand/10 text-brand ring-1 ring-brand/35"
+                : "text-brand hover:bg-canvas"
+            }`}
+            onClick={() => setScheduleOpen(true)}
+            aria-label="Schedule"
+            title={scheduleMode === "later" ? `Scheduled for: ${customStartTime}` : "Schedule for later"}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 2" />
             </svg>
           </button>
           <Button variant="pill" onClick={() => void submit()} disabled={submitting}>
-            Send Later
+            {scheduleMode === "immediate" ? "Send" : "Schedule"}
           </Button>
         </div>
       </header>
@@ -333,32 +357,71 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
       </div>
 
       <Modal open={scheduleOpen} onClose={() => setScheduleOpen(false)}>
-        <h3 className="mb-4 text-lg font-semibold">Send Later</h3>
-        <label className="mb-4 flex items-center justify-between rounded-lg border border-line px-3 py-2">
-          <span className="text-sm text-muted-2">Pick date & time</span>
-          <input
-            type="datetime-local"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="bg-transparent text-sm outline-none"
-          />
-        </label>
-        <div className="flex flex-col gap-2 text-sm text-ink">
-          {[
-            { label: "Tomorrow", date: tomorrowAt(9) },
-            { label: "Tomorrow, 10:00 AM", date: tomorrowAt(10) },
-            { label: "Tomorrow, 11:00 AM", date: tomorrowAt(11) },
-            { label: "Tomorrow, 3:00 PM", date: tomorrowAt(15) },
-          ].map((opt) => (
-            <button
-              key={opt.label}
-              type="button"
-              className="rounded-md px-2 py-2 text-left hover:bg-field"
-              onClick={() => setStartTime(toDatetimeLocal(opt.date))}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <h3 className="mb-4 text-lg font-semibold">Schedule Delivery</h3>
+        
+        <div className="space-y-3 mb-4">
+          <label className="flex items-center gap-3 rounded-lg border border-line p-3 cursor-pointer hover:bg-field">
+            <input
+              type="radio"
+              name="scheduleType"
+              checked={scheduleMode === "immediate"}
+              onChange={() => setScheduleMode("immediate")}
+              className="text-brand focus:ring-brand"
+            />
+            <div>
+              <span className="block text-sm font-semibold text-ink">Start immediately</span>
+              <span className="block text-xs text-muted">Send as soon as worker processes the batch (timestamp calculated on submission)</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 rounded-lg border border-line p-3 cursor-pointer hover:bg-field">
+            <input
+              type="radio"
+              name="scheduleType"
+              checked={scheduleMode === "later"}
+              onChange={() => {
+                setScheduleMode("later");
+                if (!customStartTime) setCustomStartTime(toDatetimeLocal(tomorrowAt(9)));
+              }}
+              className="mt-0.5 text-brand focus:ring-brand"
+            />
+            <div className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-ink">Schedule for later</span>
+              <span className="block text-xs text-muted mb-2">Pick an explicit date and time in the future</span>
+              
+              {scheduleMode === "later" ? (
+                <div className="mt-2 space-y-3">
+                  <label className="flex items-center justify-between rounded-lg border border-line bg-white px-3 py-2">
+                    <span className="text-xs text-muted-2">Date & Time:</span>
+                    <input
+                      type="datetime-local"
+                      value={customStartTime}
+                      onChange={(e) => setCustomStartTime(e.target.value)}
+                      className="bg-transparent text-xs text-ink outline-none"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-1.5 text-xs text-ink">
+                    {[
+                      { label: "Tomorrow 9 AM", date: tomorrowAt(9) },
+                      { label: "Tomorrow 10 AM", date: tomorrowAt(10) },
+                      { label: "Tomorrow 11 AM", date: tomorrowAt(11) },
+                      { label: "Tomorrow 3 PM", date: tomorrowAt(15) },
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        className="rounded-md border border-line bg-white px-2 py-1.5 text-left hover:bg-field text-xs truncate"
+                        onClick={() => setCustomStartTime(toDatetimeLocal(opt.date))}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </label>
         </div>
         <div className="mt-5 flex justify-end gap-3">
           <button type="button" className="text-sm text-muted-2" onClick={() => setScheduleOpen(false)}>

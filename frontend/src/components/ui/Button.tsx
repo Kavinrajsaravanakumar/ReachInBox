@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type Variant = "primary" | "google" | "outline" | "ghost" | "pill";
+type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
@@ -15,15 +16,23 @@ const variants: Record<Variant, string> = {
   pill: "rounded-full border border-brand bg-white px-5 py-2 text-sm font-medium text-brand hover:bg-brand-mint",
 };
 
+const sizes: Record<Size, string> = {
+  sm: "px-3 py-1 text-xs",
+  md: "px-4 py-2 text-sm",
+  lg: "px-6 py-3 text-base",
+};
+
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
+  size?: Size;
   children: ReactNode;
 };
 
-export function Button({ variant = "primary", className = "", children, ...rest }: Props) {
+export function Button({ variant = "primary", size, className = "", children, ...rest }: Props) {
+  const sizeClass = size ? sizes[size] : "";
   return (
     <button
-      className={`${variants[variant]} disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`${variants[variant]} ${sizeClass} disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       {...rest}
     >
       {children}

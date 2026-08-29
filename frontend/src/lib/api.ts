@@ -1,9 +1,8 @@
 import { clearSession, getToken } from "@/lib/auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+import { API_BASE_URL } from "@/config/constants";
 
 export function apiUrl(path: string): string {
-  return `${API_URL}${path}`;
+  return `${API_BASE_URL}${path}`;
 }
 
 export class ApiError extends Error {
@@ -47,12 +46,23 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   const res = await fetch(apiUrl(path), {
     method: "POST",
-    headers: headers(true),
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: isFormData
+      ? { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) }
+      : headers(true),
+    body: isFormData ? (body as FormData) : body === undefined ? undefined : JSON.stringify(body),
   });
   return parse<T>(res);
 }
 
-export { API_URL };
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    method: "DELETE",
+    headers: headers(true),
+  });
+  return parse<T>(res);
+}
+
+export { API_BASE_URL, API_BASE_URL as API_URL };

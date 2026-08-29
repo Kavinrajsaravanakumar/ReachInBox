@@ -63,6 +63,25 @@ export type AuthPayload = {
   sub: string;
   email: string;
   name?: string;
+  avatarUrl?: string | null;
   iat?: number;
   exp?: number;
+};
+
+export type SlackIntegration = {
+  id?: string;
+  userId?: string;
+  connected: boolean;
+  teamName?: string | null;
+  channelId?: string | null;
+  webhookUrl?: string | null;
+  connectedAt?: string | null;
+};
+
+export type SlackIntegrationResponse = {
+  connected: boolean;
+  teamName?: string | null;
+  channelId?: string | null;
+  webhookUrl?: string | null;
+  connectedAt?: string | null;
 };

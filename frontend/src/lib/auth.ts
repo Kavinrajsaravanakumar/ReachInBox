@@ -1,9 +1,5 @@
 import type { AuthPayload, User } from "@/types";
-
-const TOKEN_KEY = "rib_token";
-const USER_KEY = "rib_user";
-const SENDER_KEY = "rib_sender_id";
-const SLACK_KEY = "rib_slack_connected";
+import { SENDER_KEY, SLACK_KEY, TOKEN_KEY, USER_KEY } from "@/config/constants";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -54,7 +50,7 @@ export function decodeUser(token: string): User | null {
     const payload = JSON.parse(atob(token.split(".")[1] ?? "")) as AuthPayload;
     const email = payload.email || "";
     const name = payload.name || email.split("@")[0] || "Account";
-    return { id: payload.sub, email, name };
+    return { id: payload.sub, email, name, avatarUrl: payload.avatarUrl ?? null };
   } catch {
     return null;
   }
