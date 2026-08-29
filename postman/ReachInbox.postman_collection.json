@@ -1,0 +1,115 @@
+{
+  "info": {
+    "name": "ReachInbox Email Scheduler",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "senderId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Dev auth (local JWT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('token', j.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"qa@localhost\", \"name\": \"QA\" }"
+        },
+        "url": "{{baseUrl}}/api/auth/dev"
+      }
+    },
+    {
+      "name": "Google OAuth start (JSON URL)",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/google"
+      }
+    },
+    {
+      "name": "Register sender",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('senderId', j.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"qa@example.com\", \"displayName\": \"QA Sender\", \"maxEmailsPerHour\": 2 }"
+        },
+        "url": "{{baseUrl}}/api/senders"
+      }
+    },
+    {
+      "name": "Schedule emails",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"senderId\": \"{{senderId}}\",\n  \"subject\": \"Hello\",\n  \"body\": \"ReachInbox test body searchable\",\n  \"recipients\": [\"a@example.com\", \"b@example.com\", \"c@example.com\", \"d@example.com\", \"e@example.com\"],\n  \"startTime\": \"2026-08-28T00:00:00.000Z\",\n  \"delayBetweenEmailsMs\": 0,\n  \"maxEmailsPerHour\": 2\n}"
+        },
+        "url": "{{baseUrl}}/api/emails/schedule"
+      }
+    },
+    {
+      "name": "List emails",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/emails?status=scheduled&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Search emails (Elasticsearch)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/emails?search=ReachInbox&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Slack OAuth authorize",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/slack/oauth/authorize"
+      }
+    }
+  ]
+}
