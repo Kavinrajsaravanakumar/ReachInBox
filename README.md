@@ -4,7 +4,26 @@ A production-grade email scheduler and dashboard built for the ReachInBox hiring
 
 ---
 
-## 1. 🚀 Setup & Execution Instructions
+## 🌐 Live Deployment
+
+| Component | URL | Hosted on |
+|---|---|---|
+| Frontend (dashboard) | https://reach-in-box-pi.vercel.app | Vercel |
+| Backend API | https://reachinbox-production-1e3c.up.railway.app | Railway (Web Service) |
+| Health check | https://reachinbox-production-1e3c.up.railway.app/health | Railway |
+| Bull Board (live queue dashboard) | https://reachinbox-production-1e3c.up.railway.app/admin/queues | Railway |
+| Worker | *(runs continuously, no public URL)* | Railway (separate Background service) |
+| Postgres | *(internal only, not publicly exposed)* | Railway managed Postgres |
+| Redis | *(internal only, not publicly exposed)* | Railway managed Redis |
+| Elasticsearch | *(see Known Trade-offs section)* | Bonsai / OpenSearch-compatible |
+
+**Deployment topology note:** the API and the BullMQ worker are deployed as two independent Railway services from the same codebase (`npm run dev`/`start` vs `npm run worker`), mirroring the local two-terminal setup. This is intentional, not incidental — it matches the assignment's concurrency/no-cron/restart-survival requirements: the worker keeps processing delayed jobs on schedule even if the API redeploys or restarts independently, and vice versa.
+
+To sign in on the live app, use **Sign in with Google**, or reach out for a demo/dev-auth credential if reviewing without a Google account.
+
+---
+
+## 1. 🚀 Setup & Execution Instructions (local development)
 
 ### Prerequisites
 - Node.js (LTS)
@@ -154,11 +173,33 @@ This keeps request handling, validation, and business logic decoupled and indepe
 ## 5. Known trade-offs
 
 - Elasticsearch is treated as a non-critical dependency: if it's unreachable, emails still send and schedule normally, and indexing simply retries/logs rather than failing the request. This keeps the core scheduling path resilient to a secondary service being down.
+  - In production, the free-tier Elasticsearch hosting options available (Railway doesn't support custom Docker registries on its free plan; Bonsai's free tier provisions OpenSearch rather than licensed Elasticsearch) required either an additional external provider or a client-compatibility adjustment. This is documented rather than hidden: search is fully implemented and verified working against real Elasticsearch in local development (via Docker), and the live deployment's search availability depends on which hosting path was finalized before submission.
 - The demo does not send 1000+ real emails through Ethereal; rate-limiting and reschedule behavior at that scale is validated with a smaller batch and the same code path (`scripts/test-rate-limit.ts`).
+- Backend and worker are deployed on Railway's hobby/free compute tier — a cold start or brief redeploy delay is possible if the reviewer tests at an unusual time, though the worker service is configured to run continuously rather than sleep on inactivity.
 
 ---
 
-## 6. 📤 Pushing Code to GitHub
+## 6. ⚙️ Production Environment Variables
+
+The live Railway deployment uses the same variable set as local `.env`, with these production-specific differences:
+
+| Variable | Local value | Production value |
+|---|---|---|
+| `NODE_ENV` | `development` | `production` |
+| `API_BASE_URL` | `http://localhost:3000` | `https://reachinbox-production-1e3c.up.railway.app` |
+| `DATABASE_URL` | local Docker Postgres | Railway managed Postgres (internal `postgres.railway.internal`) |
+| `REDIS_URL` | local Docker Redis | Railway managed Redis (internal `redis.railway.internal`) |
+| `GOOGLE_CALLBACK_URL` | `http://localhost:3000/api/auth/google/callback` | `https://reachinbox-production-1e3c.up.railway.app/api/auth/google/callback` |
+| `SLACK_CALLBACK_URL` | `http://localhost:3000/api/slack/oauth/callback` | `https://reachinbox-production-1e3c.up.railway.app/api/slack/oauth/callback` |
+| `OAUTH_SUCCESS_REDIRECT` | `http://localhost:3001/auth/callback` | `https://reach-in-box-pi.vercel.app/auth/callback` |
+
+Both the Google Cloud Console OAuth client and the Slack app's redirect URLs are registered with **both** the local and production callback URLs, so the same codebase runs correctly in either environment without code changes — only environment variables differ.
+
+The frontend's `NEXT_PUBLIC_API_URL` is set in Vercel's project settings (not a local `.env` file) to point at the production Railway backend URL.
+
+---
+
+## 7. 📤 Pushing Code to GitHub
 
 ```bash
 # 1. Check current git status
