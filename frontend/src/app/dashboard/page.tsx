@@ -33,12 +33,12 @@ export default function DashboardPage() {
   const currentTotal = tab === "scheduled" ? scheduledTotal : sentTotal;
   const totalPages = Math.max(1, Math.ceil(currentTotal / PAGE_SIZE));
 
-  const load = useCallback(async (q: string, sPage: number, snPage: number) => {
+  const load = useCallback(async (q: string, sPage: number, snPage: number, isSilent = false) => {
     if (!getToken()) {
       router.replace("/login");
       return;
     }
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     try {
       const qs = q.trim() ? `&search=${encodeURIComponent(q.trim())}` : "";
 
@@ -56,19 +56,19 @@ export default function DashboardPage() {
       setSent(combinedSent);
       setSentTotal(sentRes.total + failedRes.total);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not load emails");
+      if (!isSilent) toast.error(err instanceof Error ? err.message : "Could not load emails");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [router, toast]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      void load(search, scheduledPage, sentPage);
+      void load(search, scheduledPage, sentPage, false);
     }, search ? 280 : 0);
 
     const interval = setInterval(() => {
-      void load(search, scheduledPage, sentPage);
+      void load(search, scheduledPage, sentPage, true);
     }, 3500);
 
     return () => {

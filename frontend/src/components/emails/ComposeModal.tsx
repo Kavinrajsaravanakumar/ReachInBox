@@ -44,7 +44,7 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
   const [delaySec, setDelaySec] = useState("0");
   const [hourly, setHourly] = useState("0");
   const [scheduleMode, setScheduleMode] = useState<"immediate" | "later">("immediate");
-  const [customStartTime, setCustomStartTime] = useState("");
+  const [customStartTime, setCustomStartTime] = useState(() => toDatetimeLocal(new Date()));
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -381,7 +381,7 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
               checked={scheduleMode === "later"}
               onChange={() => {
                 setScheduleMode("later");
-                if (!customStartTime) setCustomStartTime(toDatetimeLocal(tomorrowAt(9)));
+                if (!customStartTime) setCustomStartTime(toDatetimeLocal(new Date()));
               }}
               className="mt-0.5 text-brand focus:ring-brand"
             />
@@ -403,10 +403,10 @@ export function ComposeModal({ open = true, onClose, asPage = false, onScheduled
 
                   <div className="grid grid-cols-2 gap-1.5 text-xs text-ink">
                     {[
+                      { label: "Current Time", date: new Date() },
+                      { label: "In 15 Mins", date: new Date(Date.now() + 15 * 60000) },
+                      { label: "In 1 Hour", date: new Date(Date.now() + 60 * 60000) },
                       { label: "Tomorrow 9 AM", date: tomorrowAt(9) },
-                      { label: "Tomorrow 10 AM", date: tomorrowAt(10) },
-                      { label: "Tomorrow 11 AM", date: tomorrowAt(11) },
-                      { label: "Tomorrow 3 PM", date: tomorrowAt(15) },
                     ].map((opt) => (
                       <button
                         key={opt.label}
