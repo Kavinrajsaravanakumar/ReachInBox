@@ -87,22 +87,51 @@ export async function listEmails(opts: {
   const offset = (page - 1) * limit;
 
   if (opts.search && opts.search.trim().length > 0) {
-    const { ids, total } = await searchEmails({
-      userId: opts.userId,
-      query: opts.search.trim(),
-      status: opts.status,
-      from: offset,
-      size: limit,
-    });
-    if (ids.length === 0) {
-      return { items: [], total, page, limit };
+    const term = opts.search.trim();
+    try {
+      const { ids, total } = await searchEmails({
+        userId: opts.userId,
+        query: term,
+        status: opts.status,
+        from: offset,
+        size: limit,
+      });
+      if (ids.length > 0) {
+        const rows = await db.select().from(emails).where(
+          and(eq(emails.userId, opts.userId), inArray(emails.id, ids)),
+        );
+        const byId = new Map(rows.map((r) => [r.id, r]));
+        const items = ids.map((id) => byId.get(id)).filter((r): r is EmailRow => Boolean(r));
+        return { items, total, page, limit };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Elasticsearch search failed, falling back to database search");
     }
-    const rows = await db.select().from(emails).where(
-      and(eq(emails.userId, opts.userId), inArray(emails.id, ids)),
-    );
-    const byId = new Map(rows.map((r) => [r.id, r]));
-    const items = ids.map((id) => byId.get(id)).filter((r): r is EmailRow => Boolean(r));
-    return { items, total, page, limit };
+
+    // Database ILIKE fallback search
+    const pattern = `%${term}%`;
+    const searchConditions = [
+      eq(emails.userId, opts.userId),
+      sql`(${emails.subject} ILIKE ${pattern} OR ${emails.body} ILIKE ${pattern} OR ${emails.recipientEmail} ILIKE ${pattern})`,
+    ];
+    if (opts.status) {
+      searchConditions.push(eq(emails.status, opts.status));
+    }
+    const whereClause = and(...searchConditions);
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(emails)
+      .where(whereClause);
+    const count = countRows[0]?.count ?? 0;
+    const items = await db
+      .select()
+      .from(emails)
+      .where(whereClause)
+      .orderBy(desc(emails.scheduledAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { items, total: count, page, limit };
   }
 
   const conditions = [eq(emails.userId, opts.userId)];

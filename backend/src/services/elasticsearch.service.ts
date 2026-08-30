@@ -61,6 +61,7 @@ export async function searchEmails(opts: {
     filters.push({ term: { status: opts.status } });
   }
 
+  const cleanedQuery = opts.query.replace(/[*?]/g, "");
   const result = await esClient.search({
     index: env.ELASTICSEARCH_INDEX,
     from: opts.from,
@@ -69,10 +70,34 @@ export async function searchEmails(opts: {
       bool: {
         must: [
           {
-            multi_match: {
-              query: opts.query,
-              fields: ["subject", "body", "recipientEmail"],
-              fuzziness: "AUTO",
+            bool: {
+              should: [
+                {
+                  multi_match: {
+                    query: opts.query,
+                    fields: ["subject^3", "body", "recipientEmail^2"],
+                    type: "bool_prefix",
+                  },
+                },
+                {
+                  multi_match: {
+                    query: opts.query,
+                    fields: ["subject^3", "body", "recipientEmail^2"],
+                    fuzziness: "AUTO",
+                  },
+                },
+                ...(cleanedQuery.length > 0
+                  ? [
+                      {
+                        query_string: {
+                          query: `*${cleanedQuery}*`,
+                          fields: ["subject", "body", "recipientEmail"],
+                          default_operator: "OR" as const,
+                        },
+                      },
+                    ]
+                  : []),
+              ],
             },
           },
         ],
