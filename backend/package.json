@@ -13,7 +13,8 @@
     "seed": "tsx scripts/seed.ts",
     "backfill:es": "tsx scripts/backfill-elasticsearch.ts",
     "test:rate-limit": "tsx scripts/test-rate-limit.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:smtp": "tsx scripts/test-smtp-connectivity.ts"
   },
   "engines": {
     "node": ">=20"
